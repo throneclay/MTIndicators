@@ -6,7 +6,7 @@
 #property indicator_buffers 1      // Number of buffers
 #property indicator_color1 Red     // Color of the 1st line
 #property indicator_color2 Green     // Color of the 1st line
-#define iFunc iClose
+//#define iFunc iClose
 
 input int windows = 10;
 input string vstr1= "USDJPY";
@@ -26,6 +26,15 @@ int init()                          // Special function init()
    SetIndexStyle (1,DRAW_LINE,STYLE_SOLID,2);// Line style
    SetIndexLabel (1,vstr2);
    return 0;                          // Exit the special funct. init()
+}
+
+double iFunc(const string & symbol, int timeframe, int shift)
+{
+   //double vpoint = MarketInfo(symbol,MODE_DIGITS);
+   double vpoint = MarketInfo(symbol,MODE_POINT);
+
+   return (iClose(symbol, timeframe, shift)-iOpen(symbol, timeframe, shift))/vpoint;
+   //return iClose(symbol, timeframe, shift);
 }
 
 // Calculate the mean of symbol for a length time
@@ -54,6 +63,7 @@ double getstds(const string& symbol, int start, int length)
       mysd += (iFunc(symbol, 0, start+i)-mean)*(iFunc(symbol, 0, start+i)-mean);
       --i;
    }
+   mysd/=length;
    mysd = sqrt(mysd);
    return mysd;
 }
@@ -64,7 +74,8 @@ double corr(const string& symbol1, const string& symbol2, int start, const int l
    double meanXY = 0, meanX = 0, meanY=0;
    double stdX = 0, stdY = 0;
    double co = 0;
-   double XY[100];
+   double XY[];
+   ArrayResize(XY,length);
    int i = length;
    
    while(i>0)
@@ -83,7 +94,7 @@ double corr(const string& symbol1, const string& symbol2, int start, const int l
    stdX = getstds(symbol1, start, length);
    stdY = getstds(symbol2, start, length);
    
-   double stdMul=stdX*stdY+0.000001;
+   double stdMul=stdX*stdY+1e-10;
    co = (meanXY-meanX*meanY)/stdMul;
    //printf("co = %f meanXY = %f mean %s = %f mean %s = %f",co,meanXY, symbol1, meanX, symbol2, meanY);
    

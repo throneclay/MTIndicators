@@ -5,7 +5,7 @@
 #property indicator_separate_window    // Indicator is drawn in the main window
 #property indicator_buffers 1      // Number of buffers
 #property indicator_color1 Red     // Color of the 1st line
-#define iFunc iClose
+//#define iFunc iClose
 
 input int windows = 10;
 input string vstr= "USDJPY";
@@ -17,8 +17,18 @@ int init()                          // Special function init()
 {
    SetIndexBuffer(0,Corr);         // Assigning an array to a buffer
    SetIndexStyle (0,DRAW_HISTOGRAM,STYLE_SOLID,2);// Line style
-   SetIndexLabel (0,"Pearson Correlation Coefficient");
+   SetIndexLabel (0,vstr);
    return 0;                          // Exit the special funct. init()
+}
+
+double iFunc(const string & symbol, int timeframe, int shift)
+{
+   //double vpoint = MarketInfo(symbol,MODE_DIGITS);
+   double vpoint = MarketInfo(symbol,MODE_POINT);
+   //double vpoint = 1.0;
+   //printf("Symbol = %s vpoint = %f\n",symbol,vpoint);
+   return (iClose(symbol, timeframe, shift)-iOpen(symbol, timeframe, shift))/vpoint;
+   //return iClose(symbol, timeframe, shift);
 }
 
 // Calculate the mean of symbol for a length time
@@ -47,6 +57,7 @@ double getstds(const string& symbol, int start, int length)
       mysd += (iFunc(symbol, 0, start+i)-mean)*(iFunc(symbol, 0, start+i)-mean);
       --i;
    }
+   mysd/=length;
    mysd = sqrt(mysd);
    return mysd;
 }
@@ -57,7 +68,8 @@ double corr(const string& symbol1, const string& symbol2, int start, const int l
    double meanXY = 0, meanX = 0, meanY=0;
    double stdX = 0, stdY = 0;
    double co = 0;
-   double XY[100];
+   double XY[];
+   ArrayResize(XY,length);
    int i = length;
    
    while(i>0)
@@ -76,7 +88,7 @@ double corr(const string& symbol1, const string& symbol2, int start, const int l
    stdX = getstds(symbol1, start, length);
    stdY = getstds(symbol2, start, length);
    
-   double stdMul=stdX*stdY+0.000001;
+   double stdMul=stdX*stdY+1e-10;
    co = (meanXY-meanX*meanY)/stdMul;
    //printf("co = %f meanXY = %f mean %s = %f mean %s = %f",co,meanXY, symbol1, meanX, symbol2, meanY);
    
@@ -92,11 +104,13 @@ int start()                         // Special function start()
 //--------------------------------------------------------------------
    Counted_bars=IndicatorCounted(); // Number of counted bars
    i=Bars-Counted_bars-1;           // Index of the first uncounted
+   double vpoint = MarketInfo(_Symbol,MODE_POINT);
    
    while(i>=0)                      // Loop for uncounted bars
    {
       // Corr for the current Symbol and vstr
       Corr[i] = corr(_Symbol, vstr, i, windows);
+      //Corr[i] = (iClose(_Symbol, 0, i)-iOpen(_Symbol, 0, i))/vpoint;
       i--;                          // Calculating index of the next bar
    }
 //--------------------------------------------------------------------
